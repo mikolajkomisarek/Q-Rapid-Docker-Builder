@@ -1,0 +1,63 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "query": "*",
+            "analyze_wildcard": true
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+  "size": 0,
+  "_source": {
+    "excludes": []
+  },
+  "aggs": {
+    "agg1": {
+      "filters": {
+        "filters": {
+          "SB": {
+            "query_string": {
+              "query": "state:opened AND labels:\"Sprint Backlog\"",
+              "analyze_wildcard": true
+            }
+          },
+          "WIP": {
+            "query_string": {
+              "query": "state:opened AND labels:Work in progress",
+              "analyze_wildcard": true
+            }
+          },
+          "MR": {
+            "query_string": {
+              "query": "state:opened AND labels:Merge Request",
+              "analyze_wildcard": true
+            }
+          },
+          "Ready": {
+            "query_string": {
+              "query": "state:opened AND labels:Ready",
+              "analyze_wildcard": true
+            }
+          },
+          "Testing": {
+            "query_string": {
+              "query": "state:opened AND labels:Testing",
+              "analyze_wildcard": true
+            }
+          },
+          "Sprintclosed": {
+            "query_string": {
+              "query": "state:opened AND labels:\"Sprint closed\"",
+              "analyze_wildcard": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+PUT modelio.test
+{ 
+  "mappings": {
+    "modelio.test": {
+      "properties": {
+     	"project": { "type": "keyword" },
+        "sessionId": { "type": "keyword" },
+        "testId": { "type": "keyword" },
+        "executionDate": { "type": "date" },
+        "type": { "type": "keyword" },
+        "subject": { "type": "text" },
+        "status": { "type": "keyword" },
+        "duration":  { "type": "integer" }
+      }
+    }
+  }
+}

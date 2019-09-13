@@ -1,0 +1,58 @@
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "query": "*",
+            "analyze_wildcard": true
+          }
+        },
+        {
+          "range": {
+            "dstart": {
+              "gt": "now-7d"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "_source": {
+    "excludes": []
+  },
+  "aggs": {
+    "ag1": {
+      "filters": {
+        "filters": {
+          "spent_0": {
+            "query_string": {
+              "query": "spent:0",
+              "analyze_wildcard": true
+            }
+          },
+          "all": {
+            "query_string": {
+              "query": "*",
+              "analyze_wildcard": true
+            }
+          },
+          "spent_gt_0": {
+            "query_string": {
+              "query": "spent:>0",
+              "analyze_wildcard": true
+            }
+          }
+        }
+      },
+      "aggs": {
+        "1": {
+          "cardinality": {
+            "field": "iid"
+          }
+        }
+      }
+    }
+  }
+}

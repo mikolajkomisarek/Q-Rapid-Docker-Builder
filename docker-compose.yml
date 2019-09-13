@@ -1,0 +1,292 @@
+version: '3.4'
+services:
+  db:
+    build:
+      network: host
+      context: tools/postgres
+      args:
+        - DB_USER
+        - DB_NAME
+        - DB_PASSWORD
+        - DB_LOCALE
+    container_name: qrapids_postgres
+    environment:
+    - DB_USER
+    - DB_PASSWORD
+    - DB_LOCALE
+    ports:
+    - "${DB_PORT}:5432"
+    volumes:
+    - ${COMPOSE_PROJECT_HOME}/${COMPOSE_PROJECT_NAME}/www/db/backup:/home/postgres/backup
+    - postgresql:/var/lib/postgresql/data
+    networks: 
+    - qrapids
+    restart: always
+
+  rbase:
+    build:
+      network: host
+      context: node-rbase
+    container_name: qrapids_rbase
+    ports:
+    - "${RB_PORT}:6311"
+    networks: 
+    - qrapids
+    entrypoint: "/home/ruser/run.sh"
+    volumes:
+    - ./node-rbase/lib:/home/ruser/libs
+    - ./node-rbase/run.sh:/home/ruser/run.sh
+    external_links:
+    - elasticsearch
+    - dashboard
+
+  qralert:
+    build:
+      network: host
+      context: node-qralert
+    volumes:
+      - ./node-qralert/workdir/qr-alert.sh:/usr/src/app/qr-alert.sh
+      - ./node-qralert/workdir/rules/rules.js:/usr/src/app/rules/rules.js
+      - ./node-qralert/workdir/config.json:/usr/src/app/config.json
+    entrypoint: "/bin/bash"
+    command: "qr-alert.sh"
+    ports:
+      - "5051:5051"
+    networks: 
+      - qrapids
+    external_links:
+      - elasticsearch
+  
+  elasticsearch:
+    build:
+      network: host
+      context: tools/elasticsearch
+    container_name: ingest_elasticsearch
+    volumes:
+    - ./tools/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    - ./tools/elasticsearch/storage:/usr/share/elasticsearch/data
+    ports:
+    - "${EL_PORT_REST}:9200"
+    - "${EL_PORT_NODE}:9300"
+    environment:
+    - ES_JAVA_OPTS=-Xmx512m -Xms512m
+    networks:
+    - qrapids
+
+  kibana:
+    build:
+      network: host 
+      context: tools/kibana
+    container_name: kibana
+    ports:
+    - "${KIBANA_PORT}:5601"
+    environment:
+    - server.name=kibana
+    - server.host="0"
+    - ELASTICSEARCH_URL=http://elasticsearch:9200
+    - xpack.security.enabled=false
+    networks:
+    - qrapids
+    depends_on:
+    - elasticsearch
+    
+  zookeeper:
+    image: confluentinc/cp-zookeeper:3.2.1
+    container_name: ingest_zookeeper
+    environment:
+    - ZOOKEEPER_CLIENT_PORT=2181
+    - ZOOKEEPER_TICK_TIME=2000
+    networks:
+    - qrapids
+
+  kafka:
+    image: confluentinc/cp-kafka:3.2.1
+    container_name: ingest_kafka
+    depends_on:
+    - zookeeper
+    - elasticsearch
+    ports:
+    - ${KAFKA_PORT}:9092
+    networks:
+    - qrapids
+    environment:
+    - KAFKA_BROKER_ID=1
+    - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+    - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+
+  qrconnect_sonar:
+    build:
+      network: host 
+      context: node-qrconnect
+    container_name: qrconnect_sonarqube
+    depends_on:
+    - zookeeper
+    - kafka
+    - elasticsearch
+    - sonarqube # ONLY FOR VM PIONIER 
+    networks:
+    - qrapids
+    entrypoint: "/bin/bash"
+    command: "./scripts/run.sonarqube.sh"
+    volumes:
+    - ./node-qrconnect/config:/home/run/config
+    - ./node-qrconnect/jar:/home/run/jar
+    - ./node-qrconnect/scripts:/home/run/scripts
+
+  qreval:
+    build:
+      network: host 
+      context: node-qreval
+    container_name: qreval
+    depends_on:
+    - zookeeper
+    - kafka
+    - elasticsearch
+    - sonarqube # ONLY FOR VM PIONIER
+    - dashboard
+    environment:
+    - dashboard.notification.url=http://dashboard:8080/api/assessStrategicIndicators
+    networks:
+    - qrapids
+    volumes:
+    - ./node-qreval/projects:/projects
+
+  dashboard:
+    build:
+      network: host
+      context: node-dashboard
+    container_name: dashboard
+    environment:
+    - QRAPIDS_CONFIG_DIR
+    - QRAPIDS_DATA_DIR
+    - spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    - spring.jpa.database=POSTGRESQL
+    - spring.jpa.show-sql=false
+    - spring.jmx.enabled=false
+    - spring.datasource.driver-class-name=org.postgresql.Driver
+    - spring.datasource.platform=postgres
+    - spring.datasource.url=jdbc:postgresql://db/postgres
+    - spring.datasource.username=postgres
+    - spring.datasource.password=example
+    - qma.ip=elasticsearch
+    - qma.port=9200
+    - spring.data.elasticsearch.cluster-name=qrapids-search
+    - spring.data.elasticsearch.cluster-nodes=qrapids-node:9300
+    - rawdata.dashboard=http://localhost:5601/app/kibana#/dashboards?_g=() # <-- here must be IP !!!
+    - forecast.url=http://forecast-rest:8082 # <-- here must be IP !!!
+    - forecast.technique=ETS
+    - backlog.url=../api/addToBacklog
+    - assessSI.url=http://siassessment-rest:8082
+    # - pabre.url=http://gessi3.cs.upc.edu/pabre-ws # <--- here must be IP !!!
+    - pabre.url=http://pabrews:8080/pabre-ws # <--- here must be IP !!!
+    - fakeData=false
+    - security.enable=false
+    - security.api.enable=false
+    - server.port=8080
+    - server.url=http://localhost:8080 # <-- here must be IP !!!
+    ports:
+    - "${WEB_PORT}:8080"
+    links:
+    - db
+    external_links:
+    - elasticsearch
+    - kafka
+    - rbase
+    - siassessment-rest
+    - forecast-rest
+    - pabrews
+    networks:
+    - qrapids
+   
+  siassessment-rest:
+    build:
+      network: host
+      context: node-si-assessment-rest
+    container_name: siassessment-rest
+    networks:
+    - qrapids
+
+  forecast-rest:
+    build:
+      network: host
+      context: node-forecast-rest
+    container_name: forecast-rest
+    external_links:
+    - rbase
+    environment:
+    - Rserve.host=rbase
+    - Rserve.port=6311
+    - Rscripts.location=/usr/local/src/app/TimeSeriesFunctions_GPL_0.4.R  
+    networks:
+    - qrapids
+
+  pabrews:
+    build:
+      network: host
+      context: node-pabrews
+    container_name: pabrews
+    ports:
+      - "8085:8080"
+    networks:
+    - qrapids
+  
+  backlog-openproject:
+    build:
+      network: host
+      context: node-backlog-openproject
+    container_name: backlog-openproject
+    networks:
+    - qrapids
+    environment:
+    - server.port=
+    - openproject.url=
+    - openproject.apikey=
+    - openproject.project.name=
+    - openproject.requirement.type=
+
+  backlog-jira:
+    build:
+      network: host 
+      context: node-backlog-jira
+    container_name: backlog-jira
+    networks:
+    - qrapids
+    environment:
+    - jira.server=
+    - jira.user=
+    - jira.password=
+    - jira.project.component.name=generated_by_qrapids
+    - jira.project.component.description=This issue was generated by Q-Rapids dashboard
+    - jira.project.component.lead=
+
+  sonarqube:
+    image: sonarqube:6.3
+    container_name: sonarqube
+    ports:
+      - "4875:9000"
+    networks:
+      - qrapids
+    volumes:
+    - ./tools/sonarqube/conf:/opt/sonarqube/conf
+    - ./tools/sonarqube/data:/opt/sonarqube/data
+    - ./tools/sonarqube/logs:/opt/sonarqube/logs
+
+  sample-projects:
+    build:
+      network: host
+      context: tools/sample-projects
+    container_name: sample-projects
+    external_links:
+    - sonarqube
+    volumes:
+    - ./tools/sample-projects/projects:/home/gradle/project
+    networks:
+    - qrapids
+
+networks:
+  qrapids:
+    driver: bridge 
+volumes:
+  postgresql:

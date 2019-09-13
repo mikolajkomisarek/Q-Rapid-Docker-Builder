@@ -1,0 +1,61 @@
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "query": "*",
+            "analyze_wildcard": true
+          }
+        },
+        {
+          "range": {
+            "dstart": {
+              "gte": 1392759787076,
+              "lte": 1550526187076,
+              "format": "epoch_millis"
+            }
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+  "_source": {
+    "excludes": []
+  },
+  "aggs": {
+    "2": {
+      "filters": {
+        "filters": {
+          "all": {
+            "query_string": {
+              "query": "isactive:yes",
+              "analyze_wildcard": true
+            }
+          },
+          "major": {
+            "query_string": {
+              "query": "isactive:yes AND labelid:191",
+              "analyze_wildcard": true
+            }
+          },
+          "minor": {
+            "query_string": {
+              "query": "isactive:yes AND labelid:199",
+              "analyze_wildcard": true
+            }
+          }
+        }
+      },
+      "aggs": {
+        "val": {
+          "cardinality": {
+            "field": "iid"
+          }
+        }
+      }
+    }
+  }
+}

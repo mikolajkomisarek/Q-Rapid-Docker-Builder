@@ -1,0 +1,46 @@
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "analyze_wildcard": true,
+            "query": "*"
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+  "_source": {
+    "excludes": []
+  },
+  "aggs": {
+    "2": {
+      "filters": {
+        "filters": {
+          "testing": {
+            "query_string": {
+              "query": "isactive:yes AND labelid:204",
+              "analyze_wildcard": true
+            }
+          },
+          "ready": {
+            "query_string": {
+              "query": "isactive:yes AND labelid:206",
+              "analyze_wildcard": true
+            }
+          }
+        }
+      },
+      "aggs": {
+        "1": {
+          "cardinality": {
+            "field": "iid"
+          }
+        }
+      }
+    }
+  }
+}

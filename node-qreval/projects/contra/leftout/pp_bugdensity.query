@@ -1,0 +1,45 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "query_string": {
+            "query": "*",
+            "analyze_wildcard": true
+          }
+        }
+      ],
+      "must_not": []
+    }
+  },
+  "size": 0,
+  "_source": {
+    "excludes": []
+  },
+  "aggs": {
+    "agg1": {
+      "filters": {
+        "filters": {
+          "Opened": {
+            "query_string": {
+              "query": "state:opened",
+              "analyze_wildcard": true
+            }
+          },
+          "OpenBUG": {
+            "query_string": {
+              "query": "state:opened AND labels:BUG",
+              "analyze_wildcard": true
+            }
+          },
+          "OpenCORRECTION": {
+            "query_string": {
+              "query": "state:opened AND labels:Correct",
+              "analyze_wildcard": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

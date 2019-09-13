@@ -1,0 +1,16 @@
+PUT modelio.log
+{ 
+  "mappings": {
+    "modelio.log": {
+      "properties": {
+     	"timestamp": { "type": "date" },
+        "sessionId": { "type": "keyword" },
+        "modelioVersion": { "type": "keyword" },
+        "category": { "type": "keyword" },
+        "subcategory": { "type": "keyword" },
+        "identification": { "type": "keyword" },
+        "content": { "type": "text" }
+      }
+    }
+  }
+}

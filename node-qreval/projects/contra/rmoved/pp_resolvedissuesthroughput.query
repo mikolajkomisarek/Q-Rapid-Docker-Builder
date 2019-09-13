@@ -1,0 +1,30 @@
+{
+  "size":0,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "labelid.keyword": {
+              "value": "OutOfTheBorad"
+            }
+          }
+        },
+        {
+          "range": {
+            "dstart": {
+              "gt": "now-7d"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "aggs": {
+    "avg_elapsed": {
+      "avg": {
+        "field": "elapsed"
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+FROM anapsix/alpine-java
+RUN apk -U upgrade && \
+	apk add libstdc++ curl ca-certificates bash
+RUN mkdir -p /home/run
+COPY jar/qr-connect-0.0.4-jar-with-dependencies.jar /home/run/jar/qr-connect-0.0.4-jar-with-dependencies.jar
+WORKDIR /home/run
+RUN wget http://packages.confluent.io/archive/3.2/confluent-3.2.1-2.11.tar.gz
+RUN tar -xvf confluent-3.2.1-2.11.tar.gz 
